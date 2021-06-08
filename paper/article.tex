@@ -1,0 +1,98 @@
+\documentclass[preprint,1p]{elsarticle}
+\newcommand{\comment}[1]{}
+
+\begin{document}
+
+    \begin{frontmatter}
+
+    \title{Identifying Android Banking Malware through Measurement of User Interface Complexity}
+    \author[1]{Sean McElroy}
+    \ead{me@seanmcelroy.com}
+    \affiliation[1]{organization={Dakota State University},country={United States}}
+
+    \date{July 2021}
+
+    \begin{abstract}
+    This is a simple paragraph at the beginning of the document. A brief introduction about the main subject.
+    \end{abstract}
+
+    \begin{keyword}
+    Android security \sep malware detection \sep resource file \sep static analysis
+    \end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+Research activity for designing new methods to detect Android malware has been sustained for over a decade, and a variety of novel strategies are available and effective.\cite{RAZGALLAH2021100358} Static analysis, which uses techniques to assess an Android application package, or APK, are beneficial to provide an assessment as to whether an APK is malicious before it is executed.  Static analysis techniques can be implemented not only by mobile operating systems and antimalware solutions that execute on a user's
+mobile device, but they can also be employed by software repositories, such as Google Play, to scan for malicious packages before publishing and distributing them to end users.  However, static analysis is susceptable to adversarial techniques such as obfuscation, which intentionally renders application code less legible and analyzable and reduces the efficacy of malware detection techniques.
+
+While static analysis of an Android executable binary is a central and valuable strategy for classifying APKs as malicious, additional features are needed to improve the true and false positive detection rates.  One such classifier, DroidSieve, addresses this need by incorporating additional features that are not susceptable to binary obfuscation techniques.\cite{10.1145/3029806.3029825} Such additional features include non-executable metadata elements, such as lists of mobile operating system permissions the application can request and malicious payloads disguised in or referenced by APK resource blobs.  However, I propose Android malware is also detectable by an additional feature unconsidered by other classifiers -- the complexity of user interface design in the Android application package.
+
+\section{Related Work}
+\subsection[static]{Static Analysis}
+The static analysis of APK files has a relatively long research history, often using methods focused on the bytecode of an APK that would be executed on a target device.  Such methods include reachability, data flow, call graph, and entry point analysis.\cite{10.1145/2746266.2746271}  Matching static analysis findings against signatures of known malicious APKs or components common to malicious APKs of malware families has been supplimented by machine learning algorithms.  While accuracy of some machine learning approaches to static analysis yield lower F-scores compared to more expensive and fragile signature and hand-coded heuristic approaches\cite{10.1145/3029806.3029823}, they may more reliably detect new malware families.
+
+Notably, \citet{10.1145/3290480.3290493} observed static analysis in machine learning methods yield improved detection rates when the characteristics of certain Android resources were incorporated into feature sets.  Android resources are non-executable components in APK files which can provide or configure user interface elements, including image and sound assets and UI component layouts.  \citet{10.1145/3290480.3290493} observed the number of resource images for each pixel density varied signficiantly between benign and malicious APKs.  This UI feature alone is not significant as a malware classifier, but traditional static analysis features like intents and permissions observed in APK manifest files are becoming less sufficient and more significant static features are needed to improve detection models.\cite{10.1109/TrustCom50675.2020.00195}
+
+\subsection[dynamic]{Dynamic Analysis}
+Dynamic analysis of executing APKs yields unique features specific to the operating environment context, an area of research dating back nearly as long far as static analysis techniques.\cite{10.1007/s10844-010-0148-x}  Extracted dynamic analysis features can include Java and native method call logs and network packet captures obtained from running an APK in an emulated sandbox environment.\cite{10.1145/2480362.2480701}  Rigid static analysis that is dependent on file hashes, signature and string matches, and specific call chains can be brittle to simple obfuscation techniques.  In contrast, unlike static call chain analysis, dynamic analysis features may change with each execution, such as if they are affected by temporal, network, or other system state information.  Many modern Android malware families employ evasion techniques to hinder their classification and observation of their runtime behavior to thwart dynamic analysis.\cite{10.1145/3150376.3150378}
+
+However, static analysis of Android user interface control and data flows can vary widely from runtime observations in some contexts, leading \citet{10.1145/2931021.2931026} to suggest that this type of analysis of GUI components, in particular, may be unsound.  Where static analysis methods are unsound, dynamic analysis could provide a more accurate classification of Android applications as potential malware.  While dynamic analysis of UI features is well-researched in the area of automated UI testing, security research is somewhat limited to offensive use cases, such as activity hijacking and clickjacking attacks, and detection of the same.\cite{10.1109/PST.2017.00037}
+
+
+
+
+
+\section{User Interface Resources}
+Android application package APK files contain executable code, bundled resources, and a manifest file which provides a mpaping to code and resources as well as other metadata, including configuration settings for how the APK will be presented and
+operate when invoked on an Android operating system.  Bundled resources may include various non-UI assets, including certificates.  Substantially though, bundled resources include images, themes and color values, localizable strings, and
+layouts.  Layouts are XML files that contain symatic markup for how user interface elements are organized on a screen or menu.
+
+The Android ecosystem is comproised of many different equipment manufacutures, each manufacturing an array of mobile devices of varying hardware specifications. Designing an Android application to operate well on myriad device screen sizes and display technology types often requires many resolution-specific versions of layout files to be designed and included in the bundle of resources within an APK. Moreover, complex user interfaces often require many elements in the XML layout file to nest UI components carefully to build up full-featured user experiences.
+
+\section{Methods for Measuring UI Complexity}
+Three methods are proposed to measure user interface complexity for the purposes of classifying APK files as malicious or not.  
+
+\subsection{Density Versions of Bitmap Image Assets}
+Android applications may include scalable vector image formats which maintain
+clear and sharp characteristics on any screen size and pixel density as well as bitmaps, which vary in quality across different device models.  When bitmaps
+are used, Android device compatability documentation provides guidance to generate multiple bitmaps for each type of density qualifier.% (https://developer.android.com/training/multiscreen/screendensities)
+These qualifiers range from ldpi for low-density screens at
+120dpi to xxxhdpi for extra extra extra high-density screens which operate at 640dpi.  Applications which do not conform to this guidance may scale bitmaps to match the device's density requirement at the cost of image quality.  While hobbiest or low-quality apps may not take the time to follow this guidance, the lack of multiple density versions of bitmap image assets may be more likely to be observed in malware samples than legitimate applications, since malware designers ostensibly do not have the graphic design capacity to follow this guidance and may not have sufficient economic incentives to spend the effort to do so.
+
+\subsection{Layout XML Structure Metrics}
+Number of files (total, and menu vs layout)
+Number of elements per files
+Average number of attributes per element
+
+Only applies to declarative UI's... 
+
+Webview-centric apps could muddle this
+
+May not be a true positive indicator, may be a false positive reducer
+
+May be susceptable to clone/recompile throwing this metric off.
+
+\subsection{Number of static values}
+
+
+May be susceptable to clone/recompile throwing this metric off.
+
+\section{Data Analysis}
+To test the proposed methodlogy, CICMalDroid 2020\cite{9251198}, a large
+and recent Android Malware labeled data set was processed and analyzed.  Two
+sections of this data set were used, those APKs labeled Benign, which are not
+known by the data set maintainers to contain malware, and those labeled
+Banking, which are known to contain financial services-related malware.
+
+Processing of each APK file in the dataset was performed first using
+apktool\cite{apktool} to decompress APK packages into their constitutent
+resources.
+
+
+
+
+\bibliographystyle{elsarticle-harv} 
+\bibliography{refs.bib}
+
+\end{document}
