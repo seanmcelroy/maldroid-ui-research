@@ -19,8 +19,8 @@ namespace droid_res_parser
         {
             Console.WriteLine("Android Resource Parser and Analyzer");
 
-            const string inputPath = "/Users/smcelroy/Downloads/Benign";
-            const string outputPath = "/Users/smcelroy/Downloads/Benign.csv";
+            const string inputPath = "/Benign";
+            const string outputPath = "/Benign.csv";
 
             RecursivelyDo(null, inputPath, "*.xml", ParseXml);
 
