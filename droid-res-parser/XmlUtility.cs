@@ -1,5 +1,24 @@
+/*
+ * This file is an artifact of the research publication "Identifying Android
+ * Banking Malware through Measurement of User Interface Complexity"
+ * Copyright (c) 2023 Sean A. McElroy
+ * Authors: Sean A. McElroy
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial activities involving this software without
+ * disclosing the source code of your own applications. *
+ */
+ 
 using System;
-using System.Collections.Generic;
 using System.Xml;
 
 namespace droid_res_parser

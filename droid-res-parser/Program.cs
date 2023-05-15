@@ -1,4 +1,24 @@
-﻿using System;
+﻿/*
+ * This file is an artifact of the research publication "Identifying Android
+ * Banking Malware through Measurement of User Interface Complexity"
+ * Copyright (c) 2023 Sean A. McElroy
+ * Authors: Sean A. McElroy
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * You can be released from the requirements of the license by purchasing
+ * a commercial license. Buying such a license is mandatory as soon as you
+ * develop commercial activities involving this software without
+ * disclosing the source code of your own applications. *
+ */
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,48 +33,46 @@ namespace droid_res_parser
 
         private const int maxProjects = int.MaxValue;
 
-        private static List<ProjectMetric> metrics = new List<ProjectMetric>();
-
         static async Task Main(string[] args)
         {
             Console.WriteLine("Android Resource Parser and Analyzer");
 
-            const string inputPath = "/Benign";
-            const string outputPath = "/Benign.csv";
+            string inputPath = args[0]; // Such as "~\Downloads\Banking.tar\Banking";
+            string outputPath = args[1]; // Such as ".\data\Banking2023.csv";
+            const int malicious = 1;
 
-            RecursivelyDo(null, inputPath, "*.xml", ParseXml);
-
-            Console.WriteLine($"Projects analyzed: {projectCount}");
-
-            Console.WriteLine($"Metrics collected: {metrics.Count}");
-
+            var metrics = new List<ProjectMetric>();
             using (var sw = new StreamWriter(outputPath))
             {
-                //Console.Out.WriteLine(ProjectMetric.CsvHeader());
                 await sw.WriteLineAsync(ProjectMetric.CsvHeader());
-                foreach (var metric in metrics)
+                foreach (var metric in RecursivelyDo(null, inputPath, "*.xml", ParseXml))
                 {
-                    //Console.Out.WriteLine(metric.ToCsvRow());
-                    await sw.WriteLineAsync(metric.ToCsvRow());
+                    await sw.WriteLineAsync(metric.ToCsvRow(malicious));
+                    metrics.Add(metric);
+                    if (metrics.Count % 10 == 0)
+                        await sw.FlushAsync();
                 }
             }
+
+            Console.WriteLine($"Projects analyzed: {projectCount}");
+            Console.WriteLine($"Metrics collected: {metrics.Count}");
         }
 
-        static void RecursivelyDo(
-            string basePath,
+        static IEnumerable<ProjectMetric> RecursivelyDo(
+            string? basePath,
             string currentPath,
             string filePattern,
             Func<string, string, int, ProjectMetric, ProjectMetric> action,
             int depth = 0,
-            ProjectMetric projectMetric = null)
+            ProjectMetric? projectMetric = null)
         {
-            var actualBase = depth == 1 ? currentPath : basePath;
+            var actualBase = depth == 1 ? currentPath : (basePath ?? ".");
             if (depth == 1)
             {
                 Console.WriteLine($"dir {currentPath}");
                 projectCount++;
                 if (projectCount > maxProjects)
-                    return;
+                    yield break;
 
                 var eo = new EnumerationOptions
                 {
@@ -93,19 +111,20 @@ namespace droid_res_parser
             // Depth-first
             foreach (var subdir in Directory.GetDirectories(currentPath))
             {
-                RecursivelyDo(actualBase, subdir, filePattern, action, depth + 1, projectMetric);
+                foreach (var rd in RecursivelyDo(actualBase, subdir, filePattern, action, depth + 1, projectMetric))
+                    yield return rd;
             }
 
             foreach (var file in Directory.GetFiles(currentPath, filePattern))
             {
                 if (!file.EndsWith("AndroidManifest.xml", StringComparison.OrdinalIgnoreCase)
-                    && !file.Contains("/unknown/", StringComparison.OrdinalIgnoreCase))
+                    && !file.Contains($"{System.IO.Path.DirectorySeparatorChar}unknown{System.IO.Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                     projectMetric = action.Invoke(actualBase, file, depth + 1, projectMetric);
             }
 
             if (depth == 1)
             {
-                metrics.Add(projectMetric);
+                yield return projectMetric;
             }
         }
 
@@ -124,32 +143,32 @@ namespace droid_res_parser
                 return projectMetric;
             }
 
-            if (string.Compare(doc.DocumentElement.Name, "menu") == 0)
+            if (string.Compare(doc!.DocumentElement?.Name, "menu") == 0)
             {
                 //Console.WriteLine(" menu ".PadLeft(depth, '.'));
             }
-            else if (string.Compare(doc.DocumentElement.Name, "device-admin") == 0)
+            else if (string.Compare(doc!.DocumentElement?.Name, "device-admin") == 0)
             {
                 //Console.WriteLine(" device-admin ".PadLeft(depth, '.'));
             }
-            else if (string.Compare(doc.DocumentElement.Name, "rotate") == 0)
+            else if (string.Compare(doc!.DocumentElement?.Name, "rotate") == 0)
             {
                 //Console.WriteLine(" rotate ".PadLeft(depth, '.'));
             }
-            else if (string.Compare(doc.DocumentElement.Name, "selector") == 0)
+            else if (string.Compare(doc!.DocumentElement?.Name, "selector") == 0)
             {
                 //Console.WriteLine(" selector ".PadLeft(depth, '.'));
             }
-            else if (string.Compare(doc.DocumentElement.Name, "shape") == 0)
+            else if (string.Compare(doc!.DocumentElement?.Name, "shape") == 0)
             {
                 //Console.WriteLine(" shape ".PadLeft(depth, '.'));
             }
-            else if (string.Compare(doc.DocumentElement.Name, "vector") == 0)
+            else if (string.Compare(doc!.DocumentElement?.Name, "vector") == 0)
             {
                 //Console.WriteLine(" vector ".PadLeft(depth, '.'));
             }
             else if (
-                filePath.Contains("/res/layout")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}layout")
                 && filePath.EndsWith(".xml")
                 /*&& (
                     doc.DocumentElement.Name.Contains("Layout")
@@ -181,36 +200,58 @@ namespace droid_res_parser
             {
                 //Console.WriteLine(" layout XML file ".PadLeft(depth, '.'));
 
-                var maxDepth = doc.DocumentElement.MaxDepth();
-                var elementCount = doc.DocumentElement.ElementCount();
-                var attributeCount = doc.DocumentElement.AttributeCount();
-                projectMetric.Layouts.Add(filePath, (maxDepth, elementCount, attributeCount));
+                var maxDepth = doc!.DocumentElement.MaxDepth();
+                var elementCount = doc!.DocumentElement.ElementCount();
+                var attributeCount = doc!.DocumentElement.AttributeCount();
+                var stringRefs = doc!.DocumentElement.Attributes.Cast<XmlAttribute>().Where(a => a.Value.StartsWith("@string/")).Select(a => a.Value.Substring(8)).Distinct().ToHashSet();
+                projectMetric.Layouts.Add(filePath, (maxDepth, elementCount, attributeCount, stringRefs));
             }
             else if (
-                filePath.Contains("/res/xml")
-                && filePath.EndsWith(".xml")
+                (
+                    filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}xml")
+                    && filePath.EndsWith(".xml")
                 )
+                || (
+                    filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}values")
+                    && filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}public.xml")
+                )
+            )
             {
-                Console.WriteLine(" embedded other XML file ".PadLeft(depth, '.'));
+                /*Func<XmlElement, IEnumerable<(XmlElement elem, XmlAttribute attr)>> yc = default(Func<XmlElement, IEnumerable<(XmlElement, XmlAttribute)>>);
+                yc = (e) => e.Attributes.Cast<XmlAttribute>().Select(a => (e,a)).Union(e.ChildNodes.OfType<XmlElement>().SelectMany(ee => yc(ee)));
+                var ycA = yc(doc!.DocumentElement).ToArray();
+                var stringRefs1 = ycA
+                    .Where(a => a.attr.Value.StartsWith("@string/"))
+                    .Select(a => a.attr.Value.Substring(8));
+
+                var stringRefs2 = ycA
+                    .Where(a => string.Compare(a.attr.Name, "type") == 0 && string.Compare(a.attr.Value, "string") == 0)
+                    .Select(a => a.elem.Attributes!["name"]!.Value);
+
+                var stringRefs = stringRefs1.Union(stringRefs2)
+                    .Distinct()
+                    .ToHashSet();
+                projectMetric.OtherXmls.Add(filePath, (stringRefs));*/
+                //Console.WriteLine(" embedded other XML file ".PadLeft(depth, '.'));
             }
             else if (
-                filePath.Contains("/res/")
-                && filePath.EndsWith("/dimens.xml")
-                && string.Compare(doc.DocumentElement.Name, "resources") == 0
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}")
+                && filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}dimens.xml")
+                && string.Compare(doc!.DocumentElement.Name, "resources") == 0
                 )
             {
                 //Console.WriteLine(" 'dimens' XML file ".PadLeft(depth, '.'));
             }
             else if (
-                filePath.Contains("/res/")
-                && filePath.EndsWith("/arrays.xml")
-                && string.Compare(doc.DocumentElement.Name, "resources") == 0
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}")
+                && filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}arrays.xml")
+                && string.Compare(doc!.DocumentElement.Name, "resources") == 0
                 )
             {
                 //Console.WriteLine(" array XML file ".PadLeft(depth, '.'));
             }
             else if (
-                filePath.Contains("/res/anim")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}anim")
                 && filePath.EndsWith(".xml")
                 /*&& (
                     string.Compare(doc.DocumentElement.Name, "alpha") == 0
@@ -239,22 +280,22 @@ namespace droid_res_parser
                 //Console.WriteLine(" animation XML file ".PadLeft(depth, '.'));
                 projectMetric.XmlAnimFileCount++;
             }
-             else if (
-                filePath.Contains("/res/color/")
-                && filePath.EndsWith(".xml")
-                )
+            else if (
+               filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}color{System.IO.Path.DirectorySeparatorChar}")
+               && filePath.EndsWith(".xml")
+               )
             {
                 projectMetric.XmlColorFileCount++;
             }
             else if (
-                filePath.Contains("/res/font/")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}font{System.IO.Path.DirectorySeparatorChar}")
                 && filePath.EndsWith(".xml")
                 )
             {
                 projectMetric.XmlFontFileCount++;
             }
             else if (
-                filePath.Contains("/res/interpolator")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}interpolator")
                 && filePath.EndsWith(".xml")
                 /*&& (
                     string.Compare(doc.DocumentElement.Name, "accelerateInterpolator") == 0
@@ -274,27 +315,27 @@ namespace droid_res_parser
                 //Console.WriteLine(" animation XML file ".PadLeft(depth, '.'));
             }
             else if (
-                filePath.Contains("/res/")
-                && filePath.EndsWith("/strings.xml")
-                && string.Compare(doc.DocumentElement.Name, "resources") == 0
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}")
+                && filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}strings.xml")
+                && string.Compare(doc!.DocumentElement.Name, "resources") == 0
                 )
             {
                 //Console.WriteLine(" strings XML file ".PadLeft(depth, '.'));
                 if (doc.DocumentElement.HasChildNodes)
-                    projectMetric.StringKeys.UnionWith(doc.DocumentElement.ChildNodes.Cast<XmlNode>().Where(c => c?.Attributes != null).Select(c => c.Attributes?.GetNamedItem("name")?.Value).Where(x => x != null).DefaultIfEmpty());
+                    projectMetric.StringKeys.UnionWith(doc!.DocumentElement.ChildNodes.Cast<XmlNode>().Where(c => c?.Attributes != null).Select(c => c.Attributes?.GetNamedItem("name")?.Value).Where(x => x != null).DefaultIfEmpty());
             }
             else if (
-                filePath.Contains("/res/")
-                && filePath.EndsWith("/styles.xml")
-                && string.Compare(doc.DocumentElement.Name, "resources") == 0
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}")
+                && filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}styles.xml")
+                && string.Compare(doc!.DocumentElement?.Name, "resources") == 0
                 )
             {
                 //Console.WriteLine(" styles XML file ".PadLeft(depth, '.'));
-                if (doc.DocumentElement.HasChildNodes)
-                    projectMetric.StyleKeys.UnionWith(doc.DocumentElement.ChildNodes.Cast<XmlNode>().Where(c => c?.Attributes != null).Select(c => c.Attributes?.GetNamedItem("name")?.Value).Where(x => x != null).DefaultIfEmpty());
+                if (doc!.DocumentElement!.HasChildNodes)
+                    projectMetric.StyleKeys.UnionWith(doc!.DocumentElement.ChildNodes.Cast<XmlNode>().Where(c => c?.Attributes != null).Select(c => c.Attributes?.GetNamedItem("name")?.Value).Where(x => x != null).DefaultIfEmpty());
             }
             else if (
-                filePath.Contains("/res/drawable")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}drawable")
                 && filePath.EndsWith(".xml")
                 /*&& (
                     string.Compare(doc.DocumentElement.Name, "transition") == 0
@@ -322,7 +363,7 @@ namespace droid_res_parser
                 projectMetric.XmlDrawableFileCount++;
             }
             else if (
-                filePath.Contains("/res/transition")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}transition")
                 && filePath.EndsWith(".xml")
                 /*&& (
                     string.Compare(doc.DocumentElement.Name, "transition") == 0
@@ -340,32 +381,32 @@ namespace droid_res_parser
                 projectMetric.XmlTransitionFileCount++;
             }
             else if (
-                filePath.Contains("/res/values")
+                filePath.Contains($"{System.IO.Path.DirectorySeparatorChar}res{System.IO.Path.DirectorySeparatorChar}values")
                 && (
-                    filePath.EndsWith("/attrs.xml")
-                    || filePath.EndsWith("/anims.xml")
-                    || filePath.EndsWith("/bools.xml")
-                    || filePath.EndsWith("/colors.xml")
-                    || filePath.EndsWith("/drawables.xml")
-                    || filePath.EndsWith("/fractions.xml")
-                    || filePath.EndsWith("/integers.xml")
-                    || filePath.EndsWith("/layouts.xml")
-                    || filePath.EndsWith("/ids.xml")
-                    || filePath.EndsWith("/plurals.xml")
-                    || filePath.EndsWith("/public.xml")
-                    || filePath.EndsWith("/raws.xml")
-                    || filePath.EndsWith("/xmls.xml")
+                    filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}attrs.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}anims.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}bools.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}colors.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}drawables.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}fractions.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}integers.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}layouts.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}ids.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}plurals.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}public.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}raws.xml")
+                    || filePath.EndsWith($"{System.IO.Path.DirectorySeparatorChar}xmls.xml")
                 )
-                && string.Compare(doc.DocumentElement.Name, "resources") == 0
+                && string.Compare(doc!.DocumentElement.Name, "resources") == 0
                 )
             {
                 //Console.WriteLine(" built-in XML file ".PadLeft(depth, '.'));
             }
             else
             {
-                var relPath = filePath.Substring(basePath.Length);
-                Console.Write($"file {relPath} ".PadLeft(depth, '.'));
-                Console.WriteLine($" {doc.DocumentElement.Name} ".PadLeft(depth, '.'));
+                //var relPath = filePath.Substring(basePath.Length);
+                //Console.Write($"file {relPath} ".PadLeft(depth, '.'));
+                //Console.WriteLine($" {doc!.DocumentElement.Name} ".PadLeft(depth, '.'));
             }
 
 
