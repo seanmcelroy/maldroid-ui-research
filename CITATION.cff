@@ -1,0 +1,37 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: droid-res-parser
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Sean
+    family-names: McElroy
+    email: sean.mcelroy@trojans.dsu.edu
+    orcid: 'https://orcid.org/0000-0002-8566-7108'
+    affiliation: Dakota State University
+repository-code: 'https://github.com/seanmcelroy/maldroid-ui-research'
+abstract: >-
+  This project contains a C# project that can recursively
+  analyze a directory of Android APK files unpacked by
+  Apktool.  The program's output is a CSV file containing
+  features that can be used to classify the contents as
+  malicious or not, using an analysis of user interface
+  features, such as the characteristics of XML layout files
+  and other static elements within the resources of the APK.
+
+  This C# program is an artifact that accompanies the
+  research paper: Identifying Android Banking Malware
+  through Measurement of User Interface Complexity" by
+  Sean A. McElroy.
+keywords:
+  - Android malware
+  - malware detection
+  - static analysis
+  - user interface design
+license: AGPL-3.0-or-later
+commit: f0d87ba0c855364ee252e4fe8af7f4ff326f6786
+date-released: '2023-05-14'
