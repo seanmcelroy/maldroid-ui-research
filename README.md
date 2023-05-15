@@ -10,4 +10,4 @@ resources of the APK.
 This C# program is an artifact that accompanies the research paper:
 
 &quot;Identifying Android Banking Malware through Measurement of User Interface
-Complexity" by Sean A. McElroy.&quot;
+Complexity&quot; by Sean A. McElroy (2023).
