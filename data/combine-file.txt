@@ -1,4 +1,0 @@
-awk 'NR!=1' Benign.csv | sed 's/$/,0/' > BenignLabeled.csv 
-awk 'NR!=1' Banking.csv | sed 's/$/,1/' > BankingLabeled.csv 
-head -n 1 Benign.csv | sed 's/$/,"Label"/' >> Header.csv
-cat Header.csv BenignLabeled.csv BankingLabeled.csv > CombinedLabeled.csv
